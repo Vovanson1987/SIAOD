@@ -1,0 +1,162 @@
+import os
+import heapq
+from collections import defaultdict
+from typing import Any, Dict, List, Tuple
+
+
+class Node:
+    def __init__(self, char: str, freq: int):
+        self.char = char
+        self.freq = freq
+        self.left: Any = None
+        self.right: Any = None
+
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+
+def calculate_frequencies(text: str) -> Dict[str, int]:
+    freq_dict = defaultdict(int)
+    for char in text:
+        freq_dict[char] += 1
+    return freq_dict
+
+
+def huffman_coding(freq_dict: Dict[str, int]) -> Dict[str, str]:
+    heap = [Node(char, freq) for char, freq in freq_dict.items()]
+    heapq.heapify(heap)
+
+    while len(heap) > 1:
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
+        merged = Node(None, left.freq + right.freq)
+        merged.left = left
+        merged.right = right
+        heapq.heappush(heap, merged)
+
+    root = heap[0]
+    codes = {}
+
+    def generate_codes(node, current_code=""):
+        if node is None:
+            return
+        if node.char is not None:
+            codes[node.char] = current_code
+        generate_codes(node.left, current_code + "0")
+        generate_codes(node.right, current_code + "1")
+
+    generate_codes(root)
+    return codes
+
+
+def fixed_length_codes(freq_dict: Dict[str, int], length: int) -> Dict[str, str]:
+    num_chars = len(freq_dict)
+    binary_format = len(bin(num_chars)[2:])
+    fixed_codes = {}
+    for idx, char in enumerate(sorted(freq_dict.keys())):
+        fixed_codes[char] = format(idx, f'0{binary_format}b')
+    return fixed_codes
+
+
+def load_file(file_path: str) -> str:
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return file.read()
+
+
+def save_to_file(file_path: str, data: str):
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(data)
+
+
+def compress_text(text: str, codes: Dict[str, str]) -> str:
+    return ''.join(codes[char] for char in text)
+
+
+def display_menu():
+    print("\nМеню:")
+    print("1. Открыть текстовый файл")
+    print("2. Вывести содержимое текстового файла")
+    print("3. Вывести символы алфавита с частотой появления")
+    print("4. Сгенерировать коды для символов алфавита")
+    print("5. Сжать содержимое текстового файла (фиксированной длины)")
+    print("6. Сжать содержимое текстового файла (коды Хаффмана)")
+    print("7. Сравнить размеры файлов")
+    print("0. Выход")
+
+
+def main():
+    text = ""
+    freq_dict = {}
+    fixed_codes = {}
+    huffman_codes = {}
+
+    while True:
+        display_menu()
+        choice = input("Выберите пункт меню: ")
+
+        if choice == '1':
+            file_path = input("Введите путь к текстовому файлу: ")
+            if os.path.isfile(file_path):
+                text = load_file(file_path)
+                print("Файл успешно загружен.")
+            else:
+                print("Файл не найден.")
+
+        elif choice == '2':
+            print("Содержимое текстового файла:")
+            print(text)
+
+        elif choice == '3':
+            freq_dict = calculate_frequencies(text)
+            sorted_freq = sorted(freq_dict.items(), key=lambda item: item[1])
+            print("Символы алфавита с частотой появления:")
+            for char, freq in sorted_freq:
+                print(f"{char}: {freq}")
+
+        elif choice == '4':
+            if not freq_dict:
+                print("Сначала нужно открыть файл.")
+                continue
+            fixed_length = int(input("Введите фиксированную длину кодов: "))
+            fixed_codes = fixed_length_codes(freq_dict, fixed_length)
+            print("Коды фиксированной длины:")
+            for char, code in fixed_codes.items():
+                print(f"{char}: {code}")
+            huffman_codes = huffman_coding(freq_dict)
+            print("Коды Хаффмана:")
+            for char, code in huffman_codes.items():
+                print(f"{char}: {code}")
+
+        elif choice == '5':
+            if not fixed_codes:
+                print("Сначала сгенерируйте коды.")
+                continue
+            compressed_fixed = compress_text(text, fixed_codes)
+            save_to_file("compressed_fixed.txt", compressed_fixed)
+            print("Содержимое сжато и сохранено в 'compressed_fixed.txt'.")
+
+        elif choice == '6':
+            if not huffman_codes:
+                print("Сначала сгенерируйте коды.")
+                continue
+            compressed_huffman = compress_text(text, huffman_codes)
+            save_to_file("compressed_huffman.txt", compressed_huffman)
+            print("Содержимое сжато и сохранено в 'compressed_huffman.txt'.")
+
+        elif choice == '7':
+            original_size = len(text.encode('utf-8'))
+            fixed_size = os.path.getsize("compressed_fixed.txt")
+            huffman_size = os.path.getsize("compressed_huffman.txt")
+            print(f"Размер исходного файла: {original_size} байт")
+            print(f"Размер сжатого файла (фиксированной длины): {fixed_size} байт")
+            print(f"Размер сжатого файла (Хаффман): {huffman_size} байт")
+
+        elif choice == '0':
+            break
+
+        else:
+            print("Некорректный ввод. Пожалуйста, выберите пункт меню.")
+
+
+if __name__ == "__main__":
+    main()
