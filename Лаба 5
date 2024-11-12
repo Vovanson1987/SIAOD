@@ -1,0 +1,86 @@
+!pip install networkx matplotlib ipywidgets
+
+import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+from ipywidgets import interact, widgets, VBox, HBox, Button
+
+
+def prim_algorithm(adj_matrix):
+    n = len(adj_matrix)
+    selected_nodes = [False] * n
+    selected_nodes[0] = True
+    edges = []
+
+    while len(edges) < n - 1:
+        min_edge = (0, 0, float('inf'))  # (cost, start, end)
+        for i in range(n):
+            if selected_nodes[i]:
+                for j in range(n):
+                    if not selected_nodes[j] and adj_matrix[i][j] > 0:
+                        if adj_matrix[i][j] < min_edge[2]:
+                            min_edge = (adj_matrix[i][j], i, j)
+        edges.append(min_edge)
+        selected_nodes[min_edge[2]] = True
+
+    return edges
+
+def kruskal_algorithm(adj_matrix):
+    n = len(adj_matrix)
+    edges = [(adj_matrix[i][j], i, j) for i in range(n) for j in range(n) if adj_matrix[i][j] > 0]
+    edges.sort(key=lambda x: x[0])
+    parent = list(range(n))
+    
+    def find(node):
+        if parent[node] != node:
+            parent[node] = find(parent[node])
+        return parent[node]
+
+    mst_edges = []
+    for cost, u, v in edges:
+        root_u = find(u)
+        root_v = find(v)
+        if root_u != root_v:
+            mst_edges.append((cost, u, v))
+            parent[root_u] = root_v
+
+    return mst_edges
+
+file_upload = widgets.FileUpload(accept='.txt', multiple=False)
+algorithm_choice = widgets.Dropdown(
+    options=['Prim', 'Kruskal'],
+    description='Algorithm:',
+)
+run_button = Button(description='Run')
+output = widgets.Output()
+
+def upload_graph(change):
+    with output:
+        output.clear_output()
+        for filename, file in file_upload.value.items():
+            content = file['content']
+            matrix = np.array([[int(num) for num in line.split()] for line in content.decode('utf-8').splitlines()])
+            graph = nx.from_numpy_matrix(matrix)
+            pos = nx.spring_layout(graph)
+            plt.figure(figsize=(8, 6))
+            nx.draw(graph, pos, with_labels=True)
+            plt.title("Uploaded Graph")
+            plt.show()
+            return matrix
+
+def run_algorithm(b):
+    with output:
+        output.clear_output()
+        matrix = upload_graph(file_upload)
+        if matrix is not None:
+            if algorithm_choice.value == 'Prim':
+                edges = prim_algorithm(matrix)
+                print("MST using Prim's Algorithm:", edges)
+            else:
+                edges = kruskal_algorithm(matrix)
+                print("MST using Kruskal's Algorithm:", edges)
+
+file_upload.observe(upload_graph, names='value')
+run_button.on_click(run_algorithm)
+
+display(VBox([file_upload, algorithm_choice, run_button, output]))
