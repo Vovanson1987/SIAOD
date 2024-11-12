@@ -1,0 +1,31 @@
+def rod_cutting(prices, n):
+    # Создаем массив для хранения максимальных цен для каждой длины
+    max_revenue = [0] * (n + 1)
+
+    # Рассчитываем максимальную цену для каждой длины от 1 до n
+    for length in range(1, n + 1):
+        max_val = float('-inf')
+        for cut in range(1, length + 1):
+            max_val = max(max_val, prices[cut - 1] + max_revenue[length - cut])
+        max_revenue[length] = max_val
+
+    return max_revenue[n]
+
+def main():
+    # Вводим длину стержня
+    n = int(input("Введите длину стержня: "))
+    # Вводим цены за куски
+    prices = list(map(int, input("Введите цены за куски через пробел: ").split()))
+
+    if len(prices) != n:
+        print(f"Ошибка: количество цен должно быть равно {n}.")
+        return
+
+    # Получаем максимальную цену
+    max_price = rod_cutting(prices, n)
+    print(f"Максимальная цена, которую можно получить: {max_price}")
+
+if __name__ == "__main__":
+    main()
+
+
