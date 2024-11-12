@@ -1,0 +1,90 @@
+!pip install networkx matplotlib ipywidgets
+
+
+import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+from ipywidgets import interact, widgets, VBox, HBox, Button, Output
+
+
+def read_graph_from_file(filename):
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+        graph = np.array([list(map(int, line.strip().split())) for line in lines])
+    return graph
+
+
+def johnson_algorithm(adj_matrix):
+    G = nx.from_numpy_matrix(adj_matrix, create_using=nx.DiGraph)
+
+    # Добавляем вспомогательную вершину
+    G.add_node(len(G))
+    for i in range(len(adj_matrix)):
+        G.add_edge(len(G)-1, i, weight=0)  # Устремляем ребра к всем вершинам
+
+    # Находим потенциалы
+    h = nx.single_source_dijkstra_path_length(G, len(G)-1)
+
+    # Пересчитываем веса графа
+    for u, v in G.edges(data=True):
+        G[u][v]['weight'] += h[u] - h[v]
+
+    # Удаляем вспомогательную вершину
+    G.remove_node(len(G)-1)
+
+    # Запускаем Дейкстру для каждой вершины
+    shortest_paths = {}
+    for source in range(len(adj_matrix)):
+        lengths, paths = nx.single_source_dijkstra(G, source=source)
+        shortest_paths[source] = lengths
+
+    return shortest_paths
+
+
+
+def draw_graph(G, shortest_paths, source, destination):
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', font_weight='bold', edge_color='gray')
+    
+    if source in shortest_paths and destination in shortest_paths[source]:
+        path = nx.shortest_path(G, source=source, target=destination, weight='weight')
+        path_edges = list(zip(path, path[1:]))
+        nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='red', width=2)
+    
+    plt.show()
+
+def on_button_click(b):
+    out.clear_output()
+    adj_matrix = read_graph_from_file(filename.value)
+    source = int(source_vertex.value)
+    destination = int(destination_vertex.value)
+    
+    shortest_paths = johnson_algorithm(adj_matrix)
+    
+    draw_graph(nx.from_numpy_matrix(adj_matrix), shortest_paths, source, destination)
+    
+    with out:
+        shortest_distance = shortest_paths[source].get(destination, float('inf'))
+        print(f"Кратчайшее расстояние от {source} до {destination}: {shortest_distance}")
+
+# Создание интерфейса
+filename = widgets.Text(value='graph.txt', description='Файл:')
+source_vertex = widgets.IntText(value=0, description='Источник:')
+destination_vertex = widgets.IntText(value=1, description='Назначение:')
+run_button = Button(description='Выполнить')
+
+out = Output()
+run_button.on_click(on_button_click)
+
+VBox([filename, source_vertex, destination_vertex, run_button, out])
+
+
+
+
+import pandas as pd
+
+results = {'V': [], 'E': [], 'Time (s)': []}
+# Здесь провести замеры времени выполнения и заполнить данные в results
+
+df = pd.DataFrame(results)
+df.to_csv('results.csv', index=False)
