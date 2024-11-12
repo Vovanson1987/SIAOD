@@ -1,0 +1,106 @@
+class Stack:
+    def __init__(self):
+        self.items = []
+
+    def push(self, item):
+        self.items.append(item)
+
+    def pop(self):
+        return self.items.pop()
+
+    def peek(self):
+        return self.items[-1] if not self.is_empty() else None
+
+    def is_empty(self):
+        return len(self.items) == 0
+
+    def size(self):
+        return len(self.items)
+
+def precedence(op):
+    if op == '+' or op == '-':
+        return 1
+    if op == '*' or op == '/':
+        return 2
+    return 0
+
+def infix_to_postfix(expression):
+    output = []
+    stack = Stack()
+
+    for char in expression.split():
+        if char.isalnum():  # Если это операнд (число или буква)
+            output.append(char)
+        elif char == '(':  # Если это открывающая скобка
+            stack.push(char)
+        elif char == ')':  # Если это закрывающая скобка
+            while not stack.is_empty() and stack.peek() != '(':
+                output.append(stack.pop())
+            stack.pop()  # Убираем '('
+        else:  # Оператор
+            while (not stack.is_empty() and
+                   precedence(stack.peek()) >= precedence(char)):
+                output.append(stack.pop())
+            stack.push(char)
+
+    while not stack.is_empty():
+        output.append(stack.pop())
+
+    return ' '.join(output)
+
+def evaluate_postfix(expression):
+    stack = Stack()
+
+    for char in expression.split():
+        if char.isdigit():  # Если это число
+            stack.push(int(char))
+        else:  # Оператор
+            right = stack.pop()
+            left = stack.pop()
+            if char == '+':
+                stack.push(left + right)
+            elif char == '-':
+                stack.push(left - right)
+            elif char == '*':
+                stack.push(left * right)
+            elif char == '/':
+                stack.push(left / right)
+
+    return stack.pop()
+
+def main():
+    while True:
+        print("\nМеню:")
+        print("1. Посчитать выражение в инфиксном виде.")
+        print("2. Посчитать выражение в постфиксном виде.")
+        print("3. Перевести выражение из инфиксного в постфиксный вид.")
+        print("4. Выход.")
+
+        choice = input("Выберите опцию: ")
+
+        if choice == '1':
+            expression = input("Введите инфиксное выражение (например, 3 + 4 * 2): ")
+            postfix = infix_to_postfix(expression)
+            print("Постфиксное выражение:", postfix)
+            result = evaluate_postfix(postfix)
+            print("Результат:", result)
+
+        elif choice == '2':
+            expression = input("Введите постфиксное выражение (например, 3 4 2 * +): ")
+            result = evaluate_postfix(expression)
+            print("Результат:", result)
+
+        elif choice == '3':
+            expression = input("Введите инфиксное выражение (например, 3 + 4 * 2): ")
+            postfix = infix_to_postfix(expression)
+            print("Постфиксное выражение:", postfix)
+
+        elif choice == '4':
+            print("Выход из программы.")
+            break
+
+        else:
+            print("Недопустимый выбор, попробуйте снова.")
+
+if __name__ == "__main__":
+    main()
